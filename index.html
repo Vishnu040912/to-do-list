@@ -3,206 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Vishnu's To-Do List</title>
+  <title>Particle Constellation - Interactive Background</title>
   <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #74ebd5, #acb6e5);
-      color: #333;
+    body, html {
       margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #0a001f;
+      font-family: 'Segoe UI', sans-serif;
     }
-    .container {
-      background: white;
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-      width: 100%;
-      max-width: 500px;
+    canvas {
+      display: block;
+    }
+    .overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      text-align: center;
+      pointer-events: none;
+      z-index: 10;
     }
     h1 {
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 25px;
-    }
-    .input-group {
-      display: flex;
-      margin-bottom: 20px;
-    }
-    input[type="text"] {
-      flex: 1;
-      padding: 14px;
-      font-size: 1.1em;
-      border: 2px solid #ddd;
-      border-radius: 8px 0 0 8px;
-      outline: none;
-    }
-    input[type="text"]:focus {
-      border-color: #3498db;
-    }
-    button#addBtn {
-      padding: 0 25px;
-      background: #3498db;
-      color: white;
-      border: none;
-      border-radius: 0 8px 8px 0;
-      cursor: pointer;
-      font-size: 1.1em;
-      transition: background 0.2s;
-    }
-    button#addBtn:hover {
-      background: #2980b9;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
+      font-size: 4em;
       margin: 0;
+      text-shadow: 0 0 20px rgba(100, 200, 255, 0.8);
     }
-    li {
-      background: #f9f9f9;
-      padding: 14px 18px;
-      margin: 10px 0;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: all 0.3s ease;
-      opacity: 0;
-      transform: translateY(10px);
-      animation: fadeIn 0.4s forwards;
+    p {
+      font-size: 1.6em;
+      margin: 10px 0 0;
+      opacity: 0.9;
     }
-    @keyframes fadeIn {
-      to { opacity: 1; transform: translateY(0); }
-    }
-    li.completed {
-      background: #e8f5e9;
-      text-decoration: line-through;
-      color: #777;
-    }
-    .actions button {
-      border: none;
-      background: none;
-      font-size: 1.3em;
-      cursor: pointer;
-      margin-left: 10px;
-    }
-    .delete-btn { color: #e74c3c; }
-    .complete-btn { color: #27ae60; }
-    #clearAll {
-      display: block;
-      margin: 25px auto 0;
-      padding: 12px 30px;
-      background: #e74c3c;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1.1em;
-    }
-    #clearAll:hover { background: #c0392b; }
-    #taskCount {
-      text-align: center;
-      color: #7f8c8d;
-      margin-top: 15px;
+    footer {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.6);
+      font-size: 0.9em;
+      z-index: 10;
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>My To-Do List ✏️</h1>
+<canvas id="canvas"></canvas>
 
-  <div class="input-group">
-    <input type="text" id="taskInput" placeholder="Add a new task..." autofocus>
-    <button id="addBtn">Add</button>
-  </div>
-
-  <ul id="taskList"></ul>
-
-  <button id="clearAll">Clear All Tasks</button>
-  <div id="taskCount">0 tasks remaining</div>
+<div class="overlay">
+  <h1>Constellation Flow</h1>
+  <p>Move your mouse (or touch) to attract the stars ✨</p>
 </div>
 
+<footer>Made For Relaxation</footer>
+
 <script>
-  const taskInput = document.getElementById('taskInput');
-  const addBtn = document.getElementById('addBtn');
-  const taskList = document.getElementById('taskList');
-  const clearAllBtn = document.getElementById('clearAll');
-  const taskCount = document.getElementById('taskCount');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
 
-  // Load tasks from localStorage
-  let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+  let particles = [];
+  let mouse = { x: null, y: null, radius: 150 };
 
-  function saveTasks() {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-    updateCount();
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
   }
 
-  function updateCount() {
-    const remaining = tasks.filter(t => !t.completed).length;
-    taskCount.textContent = `${remaining} task${remaining !== 1 ? 's' : ''} remaining`;
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // Mouse / Touch events
+  function updateMouse(e) {
+    mouse.x = e.clientX || (e.touches && e.touches[0].clientX);
+    mouse.y = e.clientY || (e.touches && e.touches[0].clientY);
   }
 
-  function renderTasks() {
-    taskList.innerHTML = '';
-    tasks.forEach((task, index) => {
-      const li = document.createElement('li');
-      li.className = task.completed ? 'completed' : '';
-      li.innerHTML = `
-        <span>${task.text}</span>
-        <div class="actions">
-          <button class="complete-btn" onclick="toggleComplete(${index})">✔</button>
-          <button class="delete-btn" onclick="deleteTask(${index})">🗑</button>
-        </div>
-      `;
-      taskList.appendChild(li);
+  window.addEventListener('mousemove', updateMouse);
+  window.addEventListener('touchmove', updateMouse);
+  window.addEventListener('touchstart', updateMouse);
+
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 3 + 1;
+      this.speedX = Math.random() * 1.5 - 0.75;
+      this.speedY = Math.random() * 1.5 - 0.75;
+      this.color = `hsl(${Math.random()*60 + 180}, 80%, 70%)`; // Cyan to purple tones
+    }
+
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+
+      // Bounce off edges
+      if (this.x > canvas.width || this.x < 0) this.speedX *= -1;
+      if (this.y > canvas.height || this.y < 0) this.speedY *= -1;
+
+      // Attract to mouse
+      let dx = mouse.x - this.x;
+      let dy = mouse.y - this.y;
+      let distance = Math.sqrt(dx*dx + dy*dy);
+
+      if (distance < mouse.radius) {
+        let force = (mouse.radius - distance) / mouse.radius;
+        this.x -= dx * force * 0.08;
+        this.y -= dy * force * 0.08;
+      }
+    }
+
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = this.color;
+      ctx.fill();
+    }
+  }
+
+  function initParticles() {
+    particles = [];
+    let num = Math.floor((canvas.width * canvas.height) / 9000); // Density
+    for (let i = 0; i < num; i++) {
+      particles.push(new Particle());
+    }
+  }
+
+  initParticles();
+  window.addEventListener('resize', initParticles);
+
+  function connectParticles() {
+    for (let a = 0; a < particles.length; a++) {
+      for (let b = a; b < particles.length; b++) {
+        let dx = particles[a].x - particles[b].x;
+        let dy = particles[a].y - particles[b].y;
+        let distance = Math.sqrt(dx*dx + dy*dy);
+
+        if (distance < 120) {
+          ctx.strokeStyle = `rgba(100, 200, 255, ${1 - distance/120})`;
+          ctx.lineWidth = 1 - distance/120;
+          ctx.beginPath();
+          ctx.moveTo(particles[a].x, particles[a].y);
+          ctx.lineTo(particles[b].x, particles[b].y);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animate() {
+    ctx.fillStyle = 'rgba(10, 0, 31, 0.1)'; // Gentle trail
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach(p => {
+      p.update();
+      p.draw();
     });
-    updateCount();
+
+    connectParticles();
+
+    requestAnimationFrame(animate);
   }
 
-  function addTask() {
-    const text = taskInput.value.trim();
-    if (!text) return alert("Please enter a task!");
-    
-    tasks.push({ text, completed: false });
-    saveTasks();
-    renderTasks();
-    taskInput.value = '';
-    taskInput.focus();
-  }
+  animate();
 
-  window.toggleComplete = function(index) {
-    tasks[index].completed = !tasks[index].completed;
-    saveTasks();
-    renderTasks();
-  }
-
-  window.deleteTask = function(index) {
-    if (confirm("Delete this task?")) {
-      tasks.splice(index, 1);
-      saveTasks();
-      renderTasks();
-    }
-  }
-
-  addBtn.onclick = addTask;
-  taskInput.addEventListener('keypress', e => {
-    if (e.key === 'Enter') addTask();
+  // Optional: Reset mouse when leaving window
+  window.addEventListener('mouseout', () => {
+    mouse.x = null;
+    mouse.y = null;
   });
-
-  clearAllBtn.onclick = () => {
-    if (confirm("Clear ALL tasks? This cannot be undone.")) {
-      tasks = [];
-      saveTasks();
-      renderTasks();
-    }
-  };
-
-  // Initial render
-  renderTasks();
 </script>
 
 </body>
