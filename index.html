@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vishnu's To-Do List</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #74ebd5, #acb6e5);
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      width: 100%;
+      max-width: 500px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 25px;
+    }
+    .input-group {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 14px;
+      font-size: 1.1em;
+      border: 2px solid #ddd;
+      border-radius: 8px 0 0 8px;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #3498db;
+    }
+    button#addBtn {
+      padding: 0 25px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 0 8px 8px 0;
+      cursor: pointer;
+      font-size: 1.1em;
+      transition: background 0.2s;
+    }
+    button#addBtn:hover {
+      background: #2980b9;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    li {
+      background: #f9f9f9;
+      padding: 14px 18px;
+      margin: 10px 0;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeIn 0.4s forwards;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    li.completed {
+      background: #e8f5e9;
+      text-decoration: line-through;
+      color: #777;
+    }
+    .actions button {
+      border: none;
+      background: none;
+      font-size: 1.3em;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .delete-btn { color: #e74c3c; }
+    .complete-btn { color: #27ae60; }
+    #clearAll {
+      display: block;
+      margin: 25px auto 0;
+      padding: 12px 30px;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.1em;
+    }
+    #clearAll:hover { background: #c0392b; }
+    #taskCount {
+      text-align: center;
+      color: #7f8c8d;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>My To-Do List ✏️</h1>
+
+  <div class="input-group">
+    <input type="text" id="taskInput" placeholder="Add a new task..." autofocus>
+    <button id="addBtn">Add</button>
+  </div>
+
+  <ul id="taskList"></ul>
+
+  <button id="clearAll">Clear All Tasks</button>
+  <div id="taskCount">0 tasks remaining</div>
+</div>
+
+<script>
+  const taskInput = document.getElementById('taskInput');
+  const addBtn = document.getElementById('addBtn');
+  const taskList = document.getElementById('taskList');
+  const clearAllBtn = document.getElementById('clearAll');
+  const taskCount = document.getElementById('taskCount');
+
+  // Load tasks from localStorage
+  let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+  function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    updateCount();
+  }
+
+  function updateCount() {
+    const remaining = tasks.filter(t => !t.completed).length;
+    taskCount.textContent = `${remaining} task${remaining !== 1 ? 's' : ''} remaining`;
+  }
+
+  function renderTasks() {
+    taskList.innerHTML = '';
+    tasks.forEach((task, index) => {
+      const li = document.createElement('li');
+      li.className = task.completed ? 'completed' : '';
+      li.innerHTML = `
+        <span>${task.text}</span>
+        <div class="actions">
+          <button class="complete-btn" onclick="toggleComplete(${index})">✔</button>
+          <button class="delete-btn" onclick="deleteTask(${index})">🗑</button>
+        </div>
+      `;
+      taskList.appendChild(li);
+    });
+    updateCount();
+  }
+
+  function addTask() {
+    const text = taskInput.value.trim();
+    if (!text) return alert("Please enter a task!");
+    
+    tasks.push({ text, completed: false });
+    saveTasks();
+    renderTasks();
+    taskInput.value = '';
+    taskInput.focus();
+  }
+
+  window.toggleComplete = function(index) {
+    tasks[index].completed = !tasks[index].completed;
+    saveTasks();
+    renderTasks();
+  }
+
+  window.deleteTask = function(index) {
+    if (confirm("Delete this task?")) {
+      tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
+    }
+  }
+
+  addBtn.onclick = addTask;
+  taskInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') addTask();
+  });
+
+  clearAllBtn.onclick = () => {
+    if (confirm("Clear ALL tasks? This cannot be undone.")) {
+      tasks = [];
+      saveTasks();
+      renderTasks();
+    }
+  };
+
+  // Initial render
+  renderTasks();
+</script>
+
+</body>
+</html>
